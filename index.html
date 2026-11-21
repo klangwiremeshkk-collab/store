@@ -95,7 +95,7 @@
         <label class="f">ใช้กับเครื่อง *</label>
         <input id="machine" list="dlMachines" placeholder="เช่น ทอ3, รีด4/1, ทบ 85-9804">
         <label class="f">วัตถุประสงค์</label>
-        <select id="purpose"></select>
+        <input id="purpose" list="dlPurposes" placeholder="เลือกหรือพิมพ์ เช่น ซ่อม, PM, เปลี่ยนตามรอบ" autocomplete="off">
         <label class="f">เลขงานซ่อม (ถ้ามี)</label>
         <input id="job" placeholder="เลขที่แจ้งซ่อม">
       </div>
@@ -136,6 +136,7 @@
 
 <datalist id="dlPeople"></datalist>
 <datalist id="dlMachines"></datalist>
+<datalist id="dlPurposes"></datalist>
 <div id="toast"></div>
 
 <script>
@@ -205,7 +206,7 @@ function load() {
     d.parts.forEach(function (p) { P[p.c] = p; });
     $('dlPeople').innerHTML = d.people.map(function (x) { return '<option value="' + esc(x) + '">'; }).join('');
     $('dlMachines').innerHTML = d.machines.map(function (x) { return '<option value="' + esc(x) + '">'; }).join('');
-    $('purpose').innerHTML = d.purposes.map(function (x) { return '<option>' + esc(x) + '</option>'; }).join('');
+    $('dlPurposes').innerHTML = d.purposes.map(function (x) { return '<option value="' + esc(x) + '">'; }).join('');
     $('hdrInfo').textContent = d.parts.length + ' รายการ';
     var w = store('kwm_who'); if (w) $('who').value = w;
     try { var dr = JSON.parse(store('kwm_count') || '[]'); carts.COUNT = dr.filter(function (l) { return P[l.c]; }); } catch (e) {}
@@ -423,7 +424,7 @@ $('btnSubmit').onclick = function () {
   var head = { who: $('who').value.trim(), note: $('note').value.trim() };
   if (!head.who) { toast('กรุณาใส่ชื่อ' + (mode === 'OUT' ? 'ผู้เบิก' : 'ผู้รับเข้า'), true); return; }
   if (mode === 'OUT') {
-    head.machine = $('machine').value.trim(); head.purpose = $('purpose').value; head.job = $('job').value.trim();
+    head.machine = $('machine').value.trim(); head.purpose = $('purpose').value.trim(); head.job = $('job').value.trim();
     if (!head.machine) { toast('กรุณาระบุเครื่องที่ใช้', true); return; }
   } else { head.vendor = $('vendor').value.trim(); head.doc = $('doc').value.trim(); }
   busy = true; $('btnSubmit').disabled = true; $('btnSubmit').textContent = 'กำลังบันทึก…';
