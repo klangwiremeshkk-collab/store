@@ -92,7 +92,7 @@
       <label class="f" id="whoLabel">ผู้เบิก *</label>
       <input id="who" list="dlPeople" placeholder="เลือกหรือพิมพ์ชื่อ">
       <div id="fOut">
-        <label class="f">ใช้กับเครื่อง *</label>
+        <label class="f">ใช้กับเครื่อง * <span class="mut">(ใช้กับทุกรายการ — ถ้าบางชิ้นใช้คนละเครื่อง ให้ใส่ในรายการนั้นแทน)</span></label>
         <input id="machine" list="dlMachines" placeholder="เช่น ทอ3, รีด4/1, ทบ 85-9804">
         <label class="f">วัตถุประสงค์</label>
         <input id="purpose" list="dlPurposes" placeholder="เลือกหรือพิมพ์ เช่น ซ่อม, PM, เปลี่ยนตามรอบ" autocomplete="off">
@@ -388,7 +388,7 @@ function renderCart() {
       '<div class="row" style="margin-top:8px;justify-content:space-between">' +
       '<div class="qty"><button data-dec="' + i + '">−</button><input type="number" inputmode="decimal" min="0" step="any" data-q="' + i + '" value="' + l.q + '"><button data-inc="' + i + '">+</button><span class="mut">' + esc(p.un) + '</span></div>' +
       (mode === 'IN' ? '<div style="width:130px"><input type="number" inputmode="decimal" step="any" data-p="' + i + '" value="' + l.p + '" placeholder="ราคา/หน่วย"></div>' : '') +
-      '</div>' + (over ? '<div class="warn">⚠ เบิกเกินยอดคงเหลือในระบบ</div>' : '') + '</div>';
+      '</div>' + (mode === 'OUT' ? '<div style="margin-top:8px"><input data-m="' + i + '" list="dlMachines" value="' + esc(l.m || '') + '" placeholder="ใช้กับเครื่อง (ว่าง = ตามช่องด้านล่าง)" autocomplete="off"></div>' : '') + (over ? '<div class="warn">⚠ เบิกเกินยอดคงเหลือในระบบ</div>' : '') + '</div>';
   }).join('');
 }
 $('cart').onclick = function (e) {
@@ -401,6 +401,7 @@ $('cart').onchange = function (e) {
   var t = e.target, cart = carts[mode];
   if (t.dataset.q != null) { cart[+t.dataset.q].q = Number(t.value) || 0; renderCart(); }
   if (t.dataset.p != null) { cart[+t.dataset.p].p = t.value; }
+  if (t.dataset.m != null) { cart[+t.dataset.m].m = t.value.trim(); }
   if (t.dataset.l != null) { cart[+t.dataset.l].loc = t.value.trim(); saveCount(); }
 };
 $('cart').oninput = function (e) {
@@ -425,7 +426,7 @@ $('btnSubmit').onclick = function () {
   if (!head.who) { toast('กรุณาใส่ชื่อ' + (mode === 'OUT' ? 'ผู้เบิก' : 'ผู้รับเข้า'), true); return; }
   if (mode === 'OUT') {
     head.machine = $('machine').value.trim(); head.purpose = $('purpose').value.trim(); head.job = $('job').value.trim();
-    if (!head.machine) { toast('กรุณาระบุเครื่องที่ใช้', true); return; }
+    if (!head.machine && cart.some(function (l) { return !l.m; })) { toast('กรุณาระบุเครื่องที่ใช้ (ช่องด้านล่าง หรือแยกในแต่ละรายการ)', true); return; }
   } else { head.vendor = $('vendor').value.trim(); head.doc = $('doc').value.trim(); }
   busy = true; $('btnSubmit').disabled = true; $('btnSubmit').textContent = 'กำลังบันทึก…';
   var kind = mode;
@@ -436,7 +437,7 @@ $('btnSubmit').onclick = function () {
     done(); renderCart(); renderStock();
     toast('✅ บันทึกแล้ว ' + r.id + ' (' + r.items.length + ' รายการ)');
   }).withFailureHandler(function (e) { done(); toast('บันทึกไม่สำเร็จ: ' + e.message, true); })
-    .submitTxn(kind, head, cart.map(function (l) { return { c: l.c, q: Number(l.q), p: l.p }; }));
+    .submitTxn(kind, head, cart.map(function (l) { return { c: l.c, q: Number(l.q), p: l.p, m: l.m || '' }; }));
   function done() { busy = false; $('btnSubmit').disabled = false; setTab(mode); }
 };
 
