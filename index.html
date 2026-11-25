@@ -1,10 +1,8 @@
 <!DOCTYPE html>
 <html>
 <head>
+<base target="_top">
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-<title>KWM คลังอะไหล่</title>
-<meta name="theme-color" content="#1F6E43">
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <style>
   :root { --g:#1F6E43; --g2:#E8F3EC; --r:#C00000; --o:#E07B00; --line:#E3E6E8; --mut:#6B7280; }
@@ -13,7 +11,9 @@
   header { background:var(--g); color:#fff; padding:12px 16px; font-weight:700; font-size:18px; position:sticky; top:0; z-index:5; }
   header small { font-weight:400; opacity:.8; font-size:13px; margin-left:6px; }
   nav { display:flex; background:#fff; border-bottom:1px solid var(--line); position:sticky; top:46px; z-index:5; }
-  nav button { flex:1; border:0; background:none; padding:12px 4px; font:inherit; font-size:15px; color:var(--mut); border-bottom:3px solid transparent; }
+  nav button { flex:1; border:0; background:none; padding:7px 2px 6px; font:inherit; font-size:12.5px; color:var(--mut); border-bottom:3px solid transparent;
+               display:flex; flex-direction:column; align-items:center; gap:1px; line-height:1.15; }
+  nav button span { font-size:18px; }
   nav button.on { color:var(--g); border-bottom-color:var(--g); font-weight:700; }
   main { padding:12px; max-width:720px; margin:0 auto; }
   .card { background:#fff; border:1px solid var(--line); border-radius:12px; padding:12px; margin-bottom:12px; }
@@ -58,25 +58,36 @@
   #toast.err { background:var(--r); }
   .empty { text-align:center; color:var(--mut); padding:18px 0; }
   .hide { display:none !important; }
-  img.th { width:44px; height:44px; object-fit:cover; border-radius:8px; }
+  img.th { width:44px; height:44px; object-fit:cover; border-radius:8px; flex:none; background:#EEF0F2; }
+  .sbtn { padding:6px 10px !important; font-size:14px !important; }
+  .mgrid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .kpi { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+  .kpi div { background:#F5F7F6; border-radius:10px; padding:10px; text-align:center; }
+  .kpi b { display:block; font-size:18px; }
+  .bar { display:grid; grid-template-columns:110px 1fr 90px; gap:8px; align-items:center; font-size:14px; padding:4px 0; }
+  .bar i { display:block; height:14px; border-radius:7px; background:var(--g); min-width:2px; }
+  .bar span:last-child { text-align:right; }
+  .tag { display:inline-block; font-size:12px; padding:1px 7px; border-radius:99px; background:#EEF0F2; color:var(--mut); margin-left:4px; }
+  .h-RET { color:#2F5597; font-weight:700; } .h-CXL { color:var(--r); font-weight:700; }
 </style>
 </head>
 <body>
 <header>KWM คลังอะไหล่ <small id="hdrInfo">กำลังโหลด…</small></header>
 <nav>
-  <button data-tab="OUT" class="on">📤 เบิกออก</button>
-  <button data-tab="IN">📥 รับเข้า</button>
-  <button data-tab="COUNT">📋 นับ</button>
-  <button data-tab="STOCK">📦 สต๊อก</button>
-  <button data-tab="HIST">🕘 ประวัติ</button>
+  <button data-tab="OUT" class="on"><span>📤</span>เบิก</button>
+  <button data-tab="IN"><span>📥</span>รับเข้า</button>
+  <button data-tab="COUNT"><span>📋</span>นับ</button>
+  <button data-tab="STOCK"><span>📦</span>สต๊อก</button>
+  <button data-tab="HIST"><span>🕘</span>ประวัติ</button>
+  <button data-tab="MORE"><span>☰</span>อื่นๆ</button>
 </nav>
 <main>
   <!-- เบิกออก / รับเข้า -->
   <section id="paneTxn">
     <div class="card">
       <div class="scan">
-        <button class="btn" id="btnScan">🎥 สแกน QR</button>
-        <label class="btn alt">📷 ถ่ายรูป QR<input type="file" accept="image/*" capture="environment" id="fileQr" hidden></label>
+        <label class="btn">📷 สแกน QR<input type="file" accept="image/*" capture="environment" id="fileQr" hidden></label>
+        <button class="btn alt" id="btnScan">🎥 สแกนสด</button>
       </div>
       <div id="reader"></div><div id="readerFile" class="hide"></div>
       <input id="search" placeholder="หรือพิมพ์รหัส / ชื่ออะไหล่" autocomplete="off" style="margin-top:10px">
@@ -132,56 +143,27 @@
     <div class="row" style="justify-content:flex-end;margin-bottom:8px"><button class="btn alt" id="btnHist">↻ โหลดใหม่</button></div>
     <div class="card" id="histList"><div class="empty">กำลังโหลด…</div></div>
   </section>
+
+  <!-- อื่นๆ -->
+  <section id="paneMore" class="hide">
+    <div class="card">
+      <div class="mgrid">
+        <button class="btn alt" data-more="REORDER">🛒 ต้องสั่งซื้อ</button>
+        <button class="btn alt" data-more="REPORT">📊 รายงาน</button>
+      </div>
+      <div class="mut" id="roleInfo" style="margin-top:10px"></div>
+      <button class="btn alt" id="btnPin" style="margin-top:8px;width:100%">🔑 เปลี่ยน PIN / เข้าสู่ระบบแอดมิน</button>
+    </div>
+    <div id="moreBody"></div>
+  </section>
 </main>
+<input type="file" accept="image/*" capture="environment" id="filePhoto" hidden>
 
 <datalist id="dlPeople"></datalist>
 <datalist id="dlMachines"></datalist>
 <datalist id="dlPurposes"></datalist>
 <div id="toast"></div>
 
-<script>
-/* ====== ตั้งค่า: วางลิงก์เว็บแอป Apps Script (ลงท้ายด้วย /exec) ระหว่างเครื่องหมาย ' ' ====== */
-var API_URL = 'https://script.google.com/macros/s/AKfycbwCwmIPNTwIAqCNDzI8rwHS7oHQOdlnXTPNdKtbp6fph5EOnThejah5IN8kM3uFaVHG9g/exec';
-/* ================================================================================= */
-
-function getPin(force) {
-  var p = '';
-  try { p = localStorage.getItem('kwm_pin') || ''; } catch (e) {}
-  if (!p || force) {
-    p = window.prompt(force ? 'รหัส PIN ไม่ถูกต้อง — ใส่ใหม่' : 'ใส่รหัส PIN ของระบบอะไหล่') || '';
-    try { localStorage.setItem('kwm_pin', p); } catch (e) {}
-  }
-  return p;
-}
-function callApi(fn, args, retried) {
-  if (!/^https:\/\/script\.google\.com\/.+\/exec$/.test(API_URL)) return Promise.reject(new Error('ยังไม่ได้ใส่ API_URL ในไฟล์ index.html'));
-  return fetch(API_URL, {
-    method: 'POST', redirect: 'follow',
-    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-    body: JSON.stringify({ fn: fn, args: args, pin: getPin(retried) })
-  }).then(function (r) { return r.json(); }).then(function (j) {
-    if (j.ok) return j.data;
-    if (j.code === 'PIN' && !retried) return callApi(fn, args, true);
-    throw new Error(j.error || 'ผิดพลาด');
-  }, function (e) {
-    throw new Error('เชื่อมต่อไม่ได้ — เช็คอินเทอร์เน็ต หรือการตั้งค่า Deploy (' + e.message + ')');
-  });
-}
-/* จำลอง google.script.run ให้โค้ดเดิมใช้ได้ */
-var google = { script: { run: (function mk(ok, fail) {
-  var r = {
-    withSuccessHandler: function (f) { return mk(f, fail); },
-    withFailureHandler: function (f) { return mk(ok, f); }
-  };
-  ['getInit', 'submitTxn', 'submitCount', 'getHistory'].forEach(function (fn) {
-    r[fn] = function () {
-      callApi(fn, Array.prototype.slice.call(arguments))
-        .then(function (d) { if (ok) ok(d); }, function (e) { if (fail) fail(e); });
-    };
-  });
-  return r;
-})(null, null) } };
-</script>
 <script>
 var D = { parts: [], people: [], machines: [], purposes: [] };
 var P = {};
@@ -207,7 +189,8 @@ function load() {
     $('dlPeople').innerHTML = d.people.map(function (x) { return '<option value="' + esc(x) + '">'; }).join('');
     $('dlMachines').innerHTML = d.machines.map(function (x) { return '<option value="' + esc(x) + '">'; }).join('');
     $('dlPurposes').innerHTML = d.purposes.map(function (x) { return '<option value="' + esc(x) + '">'; }).join('');
-    $('hdrInfo').textContent = d.parts.length + ' รายการ';
+    $('hdrInfo').textContent = d.parts.length + ' รายการ' + (d.role === 'tech' ? ' · ช่าง' : ' · แอดมิน');
+    applyRole();
     var w = store('kwm_who'); if (w) $('who').value = w;
     try { var dr = JSON.parse(store('kwm_count') || '[]'); carts.COUNT = dr.filter(function (l) { return P[l.c]; }); } catch (e) {}
     renderStock();
@@ -224,6 +207,7 @@ function setTab(t) {
   $('paneTxn').classList.toggle('hide', !txn);
   $('paneStock').classList.toggle('hide', t !== 'STOCK');
   $('paneHist').classList.toggle('hide', t !== 'HIST');
+  $('paneMore').classList.toggle('hide', t !== 'MORE');
   if (txn) {
     mode = t;
     $('fOut').classList.toggle('hide', t !== 'OUT');
@@ -236,20 +220,32 @@ function setTab(t) {
   } else { stopScan(); }
   if (t === 'HIST') loadHist();
   if (t === 'STOCK') renderStock();
+  if (t === 'MORE' && !$('moreBody').innerHTML) loadReorder();
 }
+function isAdmin() { return D.role !== 'tech'; }
+function applyRole() {
+  document.querySelectorAll('nav button[data-tab="IN"], nav button[data-tab="COUNT"]').forEach(function (b) { b.classList.toggle('hide', !isAdmin()); });
+  if (!isAdmin() && (mode === 'IN' || mode === 'COUNT')) setTab('OUT');
+  $('roleInfo').textContent = isAdmin() ? 'เข้าใช้งานในฐานะ: แอดมิน (ทำได้ทุกเมนู)' : 'เข้าใช้งานในฐานะ: ช่าง (เบิก · คืน · ดูสต๊อก) — รับเข้า/นับ/ยกเลิก ต้องใช้ PIN แอดมิน';
+  $('btnPin').classList.toggle('hide', typeof API_URL === 'undefined');
+}
+$('btnPin').onclick = function () {
+  try { localStorage.removeItem('kwm_pin'); } catch (e) {}
+  location.reload();
+};
 
 /* ---------- สแกน ---------- */
 $('btnScan').onclick = function () { scanner ? stopScan() : startScan(); };
 function camErr(e) {
   var n = (e && (e.name || e.message || String(e))) || '';
-  if (/NotAllowed|Permission|denied/i.test(n)) return 'ยังไม่ได้อนุญาตกล้อง — กดไอคอนหน้าลิงก์ > สิทธิ์ > กล้อง > อนุญาต แล้วรีเฟรช';
+  if (/NotAllowed|Permission|denied/i.test(n)) return 'สแกนสดถูกบล็อก — ใช้ปุ่ม "📷 สแกน QR" แทน (ถ่ายรูปแล้วอ่านให้อัตโนมัติ)';
   if (/NotFound|Overconstrained/i.test(n)) return 'ไม่พบกล้องในเครื่องนี้';
   if (/NotReadable|in use/i.test(n)) return 'กล้องถูกแอปอื่นใช้อยู่ — ปิดแอปกล้อง/LINE แล้วลองใหม่';
-  if (/policy|secure|iframe|not supported|undefined/i.test(n)) return 'เปิดกล้องไม่ได้ — ใช้ปุ่ม "📷 ถ่ายรูป QR" แทน';
-  return 'เปิดกล้องไม่ได้ (' + n + ') — ใช้ปุ่ม "📷 ถ่ายรูป QR" แทน';
+  if (/policy|secure|iframe|not supported|undefined/i.test(n)) return 'สแกนสดใช้ไม่ได้ในเครื่องนี้ — ใช้ปุ่ม "📷 สแกน QR" แทน';
+  return 'สแกนสดใช้ไม่ได้ (' + n + ') — ใช้ปุ่ม "📷 สแกน QR" แทน';
 }
 function startScan() {
-  if (typeof Html5Qrcode === 'undefined') { toast('โหลดตัวสแกนไม่ได้ — ใช้ปุ่ม "📷 ถ่ายรูป QR" แทน', true); return; }
+  if (typeof Html5Qrcode === 'undefined') { toast('โหลดตัวสแกนสดไม่ได้ — ใช้ปุ่ม "📷 สแกน QR" แทน', true); return; }
   $('reader').style.display = 'block';
   scanner = new Html5Qrcode('reader', {
     verbose: false,
@@ -270,7 +266,7 @@ function startScan() {
 }
 function stopScan() {
   var s = scanner; scanner = null;
-  $('reader').style.display = 'none'; $('btnScan').textContent = '🎥 สแกน QR';
+  $('reader').style.display = 'none'; $('btnScan').textContent = '🎥 สแกนสด';
   if (s) s.stop().then(function () { s.clear(); }).catch(function () {});
 }
 /* ย่อรูปจากกล้องมือถือ (ภาพใหญ่มากมักอ่านไม่ออก) */
@@ -361,7 +357,7 @@ function renderCountLine(l, i) {
   var p = P[l.c];
   return '<div class="line"><div class="row" style="justify-content:space-between;align-items:flex-start">' +
     '<div><span class="code">' + p.c + '</span> <b>' + esc(p.n) + '</b><div class="mut">' + esc(p.t) + (p.use ? ' · ' + esc(p.use) : '') + '</div></div>' +
-    '<button class="x" data-del="' + i + '">×</button></div>' +
+    '<span><button class="btn alt sbtn" data-photo="' + p.c + '">📷</button> <button class="x" data-del="' + i + '">×</button></span></div>' +
     '<div class="cnt"><div><label>ยอดในระบบ</label><div class="sysbox">' + fmt(p.b == null ? 0 : p.b) + ' <span class="mut" style="font-weight:400">' + esc(p.un) + '</span></div></div>' +
     '<div><label>นับได้จริง *</label><input class="n" type="number" inputmode="decimal" min="0" step="any" data-n="' + i + '" value="' + esc(l.n) + '" placeholder="0"></div></div>' +
     '<div id="df' + i + '">' + diffHtml(l) + '</div>' +
@@ -393,6 +389,7 @@ function renderCart() {
 }
 $('cart').onclick = function (e) {
   var t = e.target, cart = carts[mode], i;
+  if (t.dataset.photo) { takePhoto(t.dataset.photo); return; }
   if (t.dataset.del != null) { cart.splice(+t.dataset.del, 1); if (mode === 'COUNT') saveCount(); renderCart(); }
   else if (t.dataset.inc != null) { i = +t.dataset.inc; cart[i].q = +(Number(cart[i].q) + 1).toFixed(3); renderCart(); }
   else if (t.dataset.dec != null) { i = +t.dataset.dec; if (cart[i].q > 1) { cart[i].q = +(Number(cart[i].q) - 1).toFixed(3); renderCart(); } }
@@ -475,32 +472,153 @@ function renderStock() {
   var shown = list.slice(0, 200);
   $('stockList').innerHTML = (list.length ? '<div class="mut" style="margin-bottom:6px">' + list.length + ' รายการ' + (list.length > 200 ? ' (แสดง 200 แรก — พิมพ์ค้นหาเพื่อกรอง)' : '') + '</div>' : '<div class="empty">ไม่พบรายการ</div>') +
     shown.map(function (p) {
-      return '<div class="line"><div class="row" style="justify-content:space-between;align-items:flex-start"><div>' +
+      return '<div class="line"><div class="row" style="justify-content:space-between;align-items:flex-start"><div class="row" style="align-items:flex-start">' +
+        (p.img ? '<img class="th" loading="lazy" src="' + esc(p.img) + '" data-zoom="' + esc(p.img) + '">' : '') + '<div>' +
         '<span class="code">' + p.c + '</span> <b>' + esc(p.n) + '</b>' +
-        '<div class="mut">' + esc(p.t) + (p.loc ? ' · ชั้น ' + esc(p.loc) : '') + (p.use ? ' · ' + esc(p.use) : '') + '</div></div>' +
+        '<div class="mut">' + esc(p.t) + (p.loc ? ' · ชั้น ' + esc(p.loc) : '') + (p.use ? ' · ' + esc(p.use) : '') + '</div></div></div>' +
         '<div style="text-align:right;min-width:92px"><b>' + fmt(p.b) + '</b> <span class="mut">' + esc(p.un) + '</span><br>' +
         (p.s ? '<span class="pill s-' + esc(p.s) + '">' + esc(p.s) + '</span>' : '') + '</div></div>' +
-        '<div class="row" style="gap:6px;margin-top:6px"><button class="btn alt" style="padding:6px 10px;font-size:14px" data-add="OUT" data-c="' + p.c + '">+ เบิก</button>' +
-        '<button class="btn alt" style="padding:6px 10px;font-size:14px" data-add="IN" data-c="' + p.c + '">+ รับเข้า</button>' +
-        '<button class="btn alt" style="padding:6px 10px;font-size:14px" data-add="COUNT" data-c="' + p.c + '">+ นับ</button></div></div>';
+        '<div class="row" style="gap:6px;margin-top:6px;flex-wrap:wrap"><button class="btn alt sbtn" data-add="OUT" data-c="' + p.c + '">+ เบิก</button>' +
+        (isAdmin() ? '<button class="btn alt sbtn" data-add="IN" data-c="' + p.c + '">+ รับเข้า</button>' +
+        '<button class="btn alt sbtn" data-add="COUNT" data-c="' + p.c + '">+ นับ</button>' : '') +
+        '<button class="btn alt sbtn" data-photo="' + p.c + '">📷 ' + (p.img ? 'เปลี่ยนรูป' : 'ถ่ายรูป') + '</button></div></div>';
     }).join('');
 }
 $('stockList').onclick = function (e) {
+  var z = e.target.closest('[data-zoom]'); if (z) { window.open(z.dataset.zoom.replace('sz=w800', 'sz=w1600'), '_blank'); return; }
+  var ph = e.target.closest('[data-photo]'); if (ph) { takePhoto(ph.dataset.photo); return; }
   var b = e.target.closest('[data-add]'); if (!b) return;
   setTab(b.dataset.add); addToCart(b.dataset.c); window.scrollTo(0, 0);
 };
 
 /* ---------- ประวัติ ---------- */
+var HIST = [];
 $('btnHist').onclick = loadHist;
+function histLabel(h) {
+  if (h.k === 'OUT' && h.adj) return /คืน/.test(h.x) ? ['RET', '↩️ คืนของ'] : ['CXL', '✖️ ยกเลิก (เบิก)'];
+  if (h.k === 'IN' && h.adj) return ['CXL', '✖️ ยกเลิก (รับเข้า)'];
+  return [h.k, { IN: '📥 รับเข้า', OUT: '📤 เบิก', COUNT: '📋 นับ' }[h.k]];
+}
 function loadHist() {
   $('histList').innerHTML = '<div class="empty">กำลังโหลด…</div>';
   google.script.run.withSuccessHandler(function (rows) {
-    $('histList').innerHTML = rows.length ? rows.map(function (h) {
-      return '<div class="line"><div class="row" style="justify-content:space-between"><span class="h-' + h.k + '">' + ({ IN: '📥 รับเข้า', OUT: '📤 เบิก', COUNT: '📋 นับ' }[h.k]) + '</span><span class="mut">' + esc(h.d) + '</span></div>' +
-        '<div><span class="code">' + esc(h.c) + '</span> ' + esc(h.n) + ' — <b>' + fmt(h.q) + '</b> ' + esc(h.un) + '</div>' +
-        '<div class="mut">' + esc(h.who) + (h.m ? ' · ' + esc(h.m) : '') + (h.x ? ' · ' + esc(h.x) : '') + ' · ' + esc(h.id) + '</div></div>';
+    HIST = rows;
+    $('histList').innerHTML = rows.length ? rows.map(function (h, i) {
+      var lb = histLabel(h), live = !h.adj && !h.cancelled && Number(h.q) > 0;
+      return '<div class="line"><div class="row" style="justify-content:space-between"><span class="h-' + lb[0] + '">' + lb[1] +
+        (h.cancelled ? '<span class="tag">ยกเลิกแล้ว</span>' : '') + '</span><span class="mut">' + esc(h.d) + '</span></div>' +
+        '<div' + (h.cancelled ? ' style="text-decoration:line-through;opacity:.6"' : '') + '><span class="code">' + esc(h.c) + '</span> ' + esc(h.n) + ' — <b>' + fmt(h.q) + '</b> ' + esc(h.un) + '</div>' +
+        '<div class="mut">' + esc(h.who) + (h.m ? ' · ' + esc(h.m) : '') + (h.x ? ' · ' + esc(h.x) : '') + ' · ' + esc(h.id) + '</div>' +
+        (live && (h.k === 'OUT' || (isAdmin() && h.k === 'IN')) ? '<div class="row" style="gap:6px;margin-top:6px">' +
+          (h.k === 'OUT' ? '<button class="btn alt sbtn" data-ret="' + i + '">↩️ คืนของ</button>' : '') +
+          (isAdmin() ? '<button class="btn alt sbtn" style="color:var(--r);border-color:var(--r)" data-cxl="' + i + '">✖ ยกเลิก</button>' : '') + '</div>' : '') +
+        '</div>';
     }).join('') : '<div class="empty">ยังไม่มีรายการ</div>';
   }).withFailureHandler(function (e) { $('histList').innerHTML = '<div class="empty">โหลดไม่สำเร็จ: ' + esc(e.message) + '</div>'; }).getHistory();
+}
+function askWho(label) {
+  var w = $('who').value.trim() || store('kwm_who') || '';
+  if (!w) w = (window.prompt('ชื่อ' + label) || '').trim();
+  if (w) store('kwm_who', w);
+  return w;
+}
+function afterAdj(r, msg) {
+  if (P[r.c]) { P[r.c].b = r.b; P[r.c].s = r.s; }
+  toast(msg); loadHist(); renderStock();
+}
+$('histList').onclick = function (e) {
+  var b = e.target.closest('[data-ret],[data-cxl]'); if (!b || busy) return;
+  var h = HIST[+(b.dataset.ret || b.dataset.cxl)];
+  if (b.dataset.ret != null) {
+    var q = window.prompt('คืน ' + h.n + ' กี่ ' + h.un + '? (เบิกไป ' + h.q + ')', h.q);
+    if (q == null || q === '') return;
+    if (!(Number(q) > 0)) { toast('จำนวนไม่ถูกต้อง', true); return; }
+    var who = askWho('ผู้คืน'); if (!who) return;
+    busy = true; toast('กำลังบันทึกการคืน…');
+    google.script.run.withSuccessHandler(function (r) { busy = false; afterAdj(r, '✅ คืนของแล้ว ' + r.id); })
+      .withFailureHandler(function (er) { busy = false; toast('คืนไม่สำเร็จ: ' + er.message, true); })
+      .returnTxn(h.id, h.c, Number(q), who);
+  } else {
+    var why = window.prompt('ยกเลิก ' + h.id + ' (' + h.n + ' × ' + h.q + ')\nใส่เหตุผล เช่น บันทึกผิด, เบิกซ้ำ');
+    if (why == null) return;
+    var who2 = askWho('ผู้ยกเลิก'); if (!who2) return;
+    busy = true; toast('กำลังยกเลิก…');
+    google.script.run.withSuccessHandler(function (r) { busy = false; afterAdj(r, '✅ ยกเลิกแล้ว'); })
+      .withFailureHandler(function (er) { busy = false; toast('ยกเลิกไม่สำเร็จ: ' + er.message, true); })
+      .cancelTxn(h.k, h.id, h.c, who2, why.trim());
+  }
+};
+
+/* ---------- รูปอะไหล่ ---------- */
+var photoFor = null;
+function takePhoto(c) { photoFor = c; $('filePhoto').click(); }
+$('filePhoto').onchange = function (e) {
+  var f = e.target.files[0], c = photoFor; e.target.value = '';
+  if (!f || !c) return;
+  toast('กำลังอัปโหลดรูป…');
+  shrinkImage(f, 900).then(function (r) {
+    var data = r.canvas.toDataURL('image/jpeg', 0.8);
+    google.script.run.withSuccessHandler(function (res) {
+      if (P[res.c]) P[res.c].img = res.img;
+      toast('✅ บันทึกรูปแล้ว'); renderStock(); renderCart();
+    }).withFailureHandler(function (er) { toast('อัปโหลดรูปไม่สำเร็จ: ' + er.message, true); }).uploadPhoto(c, data);
+  }).catch(function () { toast('เปิดรูปไม่ได้', true); });
+};
+
+/* ---------- อื่นๆ: ต้องสั่งซื้อ / รายงาน ---------- */
+$('paneMore').onclick = function (e) {
+  var b = e.target.closest('[data-more]');
+  if (b) { if (b.dataset.more === 'REORDER') loadReorder(); else loadReport(1); return; }
+  var m = e.target.closest('[data-months]'); if (m) { loadReport(+m.dataset.months); return; }
+  if (e.target.closest('#btnSendReorder')) {
+    toast('กำลังส่งเข้า Telegram…');
+    google.script.run.withSuccessHandler(function (r) { toast('✅ ส่งรายการต้องสั่งซื้อ ' + r.sent + ' รายการเข้า Telegram แล้ว'); })
+      .withFailureHandler(function (er) { toast('ส่งไม่สำเร็จ: ' + er.message, true); }).sendReorder();
+  }
+};
+function loadReorder() {
+  $('moreBody').innerHTML = '<div class="card"><div class="empty">กำลังโหลด…</div></div>';
+  google.script.run.withSuccessHandler(function (list) {
+    var total = list.reduce(function (s, x) { return s + x.suggest * x.price; }, 0);
+    $('moreBody').innerHTML = '<div class="card"><div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:8px"><div><b>🛒 ต้องสั่งซื้อ ' + list.length + ' รายการ</b>' +
+      '<div class="mut">ประมาณ ' + fmt(Math.round(total)) + ' บาท · แนะนำสั่งให้ได้ 2 เท่าของขั้นต่ำ</div></div>' +
+      (list.length ? '<button class="btn sbtn" id="btnSendReorder">📨 ส่งเข้า Telegram</button>' : '') + '</div>' +
+      (list.length ? list.map(function (x) {
+        return '<div class="line"><div class="row" style="justify-content:space-between;align-items:flex-start"><div><span class="code">' + x.c + '</span> <b>' + esc(x.n) + '</b>' +
+          '<div class="mut">เหลือ ' + fmt(x.b) + ' / ขั้นต่ำ ' + fmt(x.mn) + ' ' + esc(x.un) + ' · ใช้ ~' + fmt(x.monthly) + '/เดือน</div>' +
+          '<div class="mut">' + (x.vendor ? '🏪 ' + esc(x.vendor) + ' · ' : '') + 'ราคาล่าสุด ' + fmt(x.price) + (x.lastIn ? ' (' + esc(x.lastIn) + ')' : '') + '</div></div>' +
+          '<div style="text-align:right;min-width:80px"><div class="mut">แนะนำสั่ง</div><b style="font-size:20px">' + fmt(x.suggest) + '</b> <span class="mut">' + esc(x.un) + '</span></div></div></div>';
+      }).join('') : '<div class="empty">✅ ไม่มีรายการที่ต้องสั่งซื้อ<br><span class="mut">(อะไหล่ที่ยังไม่นับสต๊อกจะยังไม่แสดงในรายการนี้)</span></div>') + '</div>';
+  }).withFailureHandler(function (er) { $('moreBody').innerHTML = '<div class="card"><div class="empty">โหลดไม่สำเร็จ: ' + esc(er.message) + '</div></div>'; }).getReorder();
+}
+function bars(list, unit) {
+  var max = list.reduce(function (m, x) { return Math.max(m, Math.abs(x.v)); }, 0) || 1;
+  return list.map(function (x) {
+    return '<div class="bar"><span>' + esc(x.k) + '</span><i style="width:' + Math.max(1, Math.round(Math.abs(x.v) / max * 100)) + '%"></i><span>' + fmt(Math.round(x.v)) + (unit || '') + '</span></div>';
+  }).join('') || '<div class="empty">ยังไม่มีข้อมูล</div>';
+}
+function loadReport(months) {
+  $('moreBody').innerHTML = '<div class="card"><div class="empty">กำลังคำนวณ…</div></div>';
+  google.script.run.withSuccessHandler(function (r) {
+    var chips = [[1, 'เดือนนี้'], [3, '3 เดือน'], [6, '6 เดือน'], [12, '12 เดือน']].map(function (x) {
+      return '<button data-months="' + x[0] + '"' + (x[0] === months ? ' class="on"' : '') + '>' + x[1] + '</button>';
+    }).join('');
+    $('moreBody').innerHTML =
+      '<div class="card"><b>📊 รายงานค่าอะไหล่</b> <span class="mut">' + esc(r.from) + ' – ' + esc(r.to) + '</span><div class="chips">' + chips + '</div></div>' +
+      '<div class="card"><div class="kpi"><div><span class="mut">ค่าอะไหล่ที่เบิก</span><b>' + fmt(Math.round(r.total)) + '</b><span class="mut">บาท · ' + r.lines + ' รายการ</span></div>' +
+      '<div><span class="mut">มูลค่าสต๊อก</span><b>' + fmt(r.stockValue) + '</b><span class="mut">บาท (ที่นับแล้ว)</span></div>' +
+      '<div><span class="mut">ค้างเกิน 6 เดือน</span><b>' + r.slowCount + '</b><span class="mut">รายการ · ' + fmt(r.slowValue) + ' บาท</span></div></div></div>' +
+      '<div class="card"><b>ค่าอะไหล่ตามเครื่อง (บาท)</b>' + bars(r.byMachine) + '</div>' +
+      '<div class="card"><b>ตามประเภทอะไหล่ (บาท)</b>' + bars(r.byType) + '</div>' +
+      '<div class="card"><b>อะไหล่ที่ใช้เงินมากสุด 10 อันดับ</b>' + (r.topParts.length ? r.topParts.map(function (x, i) {
+        return '<div class="line row" style="justify-content:space-between"><span>' + (i + 1) + '. <span class="code">' + esc(x.c) + '</span> ' + esc(x.n) +
+          ' <span class="mut">× ' + fmt(x.q) + ' ' + esc(x.un) + '</span></span><b>' + fmt(Math.round(x.amt)) + '</b></div>';
+      }).join('') : '<div class="empty">ยังไม่มีข้อมูล</div>') + '</div>' +
+      '<div class="card"><b>ของค้างสต๊อก (ไม่ได้เบิกเกิน 6 เดือน)</b>' + (r.slow.length ? r.slow.map(function (x) {
+        return '<div class="line row" style="justify-content:space-between"><span><span class="code">' + esc(x.c) + '</span> ' + esc(x.n) +
+          ' <span class="mut">เหลือ ' + fmt(x.b) + ' ' + esc(x.un) + '</span></span><b>' + fmt(x.value) + '</b></div>';
+      }).join('') : '<div class="empty">ไม่มี</div>') + '</div>';
+  }).withFailureHandler(function (er) { $('moreBody').innerHTML = '<div class="card"><div class="empty">โหลดไม่สำเร็จ: ' + esc(er.message) + '</div></div>'; }).getReport(months);
 }
 
 load();
