@@ -1,8 +1,10 @@
 <!DOCTYPE html>
 <html>
 <head>
-<base target="_top">
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>KWM คลังอะไหล่</title>
+<meta name="theme-color" content="#1F6E43">
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <style>
   :root { --g:#1F6E43; --g2:#E8F3EC; --r:#C00000; --o:#E07B00; --line:#E3E6E8; --mut:#6B7280; }
@@ -86,8 +88,8 @@
   <section id="paneTxn">
     <div class="card">
       <div class="scan">
-        <label class="btn">📷 สแกน QR<input type="file" accept="image/*" capture="environment" id="fileQr" hidden></label>
-        <button class="btn alt" id="btnScan">🎥 สแกนสด</button>
+        <button class="btn" id="btnScan">🎥 สแกน QR</button>
+        <label class="btn alt">📷 ถ่ายรูป QR<input type="file" accept="image/*" capture="environment" id="fileQr" hidden></label>
       </div>
       <div id="reader"></div><div id="readerFile" class="hide"></div>
       <input id="search" placeholder="หรือพิมพ์รหัส / ชื่ออะไหล่" autocomplete="off" style="margin-top:10px">
@@ -165,6 +167,49 @@
 <div id="toast"></div>
 
 <script>
+/* ====== ตั้งค่า: วางลิงก์เว็บแอป Apps Script (ลงท้ายด้วย /exec) ระหว่างเครื่องหมาย ' ' ====== */
+var API_URL = 'https://script.google.com/macros/s/AKfycbwCwmIPNTwIAqCNDzI8rwHS7oHQOdlnXTPNdKtbp6fph5EOnThejah5IN8kM3uFaVHG9g/exec';
+/* ================================================================================= */
+
+function getPin(force) {
+  var p = '';
+  try { p = localStorage.getItem('kwm_pin') || ''; } catch (e) {}
+  if (!p || force) {
+    p = window.prompt(force ? 'รหัส PIN ไม่ถูกต้อง — ใส่ใหม่' : 'ใส่รหัส PIN ของระบบอะไหล่') || '';
+    try { localStorage.setItem('kwm_pin', p); } catch (e) {}
+  }
+  return p;
+}
+function callApi(fn, args, retried) {
+  if (!/^https:\/\/script\.google\.com\/.+\/exec$/.test(API_URL)) return Promise.reject(new Error('ยังไม่ได้ใส่ API_URL ในไฟล์ index.html'));
+  return fetch(API_URL, {
+    method: 'POST', redirect: 'follow',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({ fn: fn, args: args, pin: getPin(retried) })
+  }).then(function (r) { return r.json(); }).then(function (j) {
+    if (j.ok) return j.data;
+    if (j.code === 'PIN' && !retried) return callApi(fn, args, true);
+    throw new Error(j.error || 'ผิดพลาด');
+  }, function (e) {
+    throw new Error('เชื่อมต่อไม่ได้ — เช็คอินเทอร์เน็ต หรือการตั้งค่า Deploy (' + e.message + ')');
+  });
+}
+/* จำลอง google.script.run ให้โค้ดเดิมใช้ได้ */
+var google = { script: { run: (function mk(ok, fail) {
+  var r = {
+    withSuccessHandler: function (f) { return mk(f, fail); },
+    withFailureHandler: function (f) { return mk(ok, f); }
+  };
+  ['getInit', 'submitTxn', 'submitCount', 'getHistory', 'returnTxn', 'cancelTxn', 'getReorder', 'sendReorder', 'getReport', 'uploadPhoto'].forEach(function (fn) {
+    r[fn] = function () {
+      callApi(fn, Array.prototype.slice.call(arguments))
+        .then(function (d) { if (ok) ok(d); }, function (e) { if (fail) fail(e); });
+    };
+  });
+  return r;
+})(null, null) } };
+</script>
+<script>
 var D = { parts: [], people: [], machines: [], purposes: [] };
 var P = {};
 var mode = 'OUT';
@@ -238,14 +283,14 @@ $('btnPin').onclick = function () {
 $('btnScan').onclick = function () { scanner ? stopScan() : startScan(); };
 function camErr(e) {
   var n = (e && (e.name || e.message || String(e))) || '';
-  if (/NotAllowed|Permission|denied/i.test(n)) return 'สแกนสดถูกบล็อก — ใช้ปุ่ม "📷 สแกน QR" แทน (ถ่ายรูปแล้วอ่านให้อัตโนมัติ)';
+  if (/NotAllowed|Permission|denied/i.test(n)) return 'ยังไม่ได้อนุญาตกล้อง — กดไอคอนหน้าลิงก์ > สิทธิ์ > กล้อง > อนุญาต แล้วรีเฟรช';
   if (/NotFound|Overconstrained/i.test(n)) return 'ไม่พบกล้องในเครื่องนี้';
   if (/NotReadable|in use/i.test(n)) return 'กล้องถูกแอปอื่นใช้อยู่ — ปิดแอปกล้อง/LINE แล้วลองใหม่';
-  if (/policy|secure|iframe|not supported|undefined/i.test(n)) return 'สแกนสดใช้ไม่ได้ในเครื่องนี้ — ใช้ปุ่ม "📷 สแกน QR" แทน';
-  return 'สแกนสดใช้ไม่ได้ (' + n + ') — ใช้ปุ่ม "📷 สแกน QR" แทน';
+  if (/policy|secure|iframe|not supported|undefined/i.test(n)) return 'เปิดกล้องไม่ได้ — ใช้ปุ่ม "📷 ถ่ายรูป QR" แทน';
+  return 'เปิดกล้องไม่ได้ (' + n + ') — ใช้ปุ่ม "📷 ถ่ายรูป QR" แทน';
 }
 function startScan() {
-  if (typeof Html5Qrcode === 'undefined') { toast('โหลดตัวสแกนสดไม่ได้ — ใช้ปุ่ม "📷 สแกน QR" แทน', true); return; }
+  if (typeof Html5Qrcode === 'undefined') { toast('โหลดตัวสแกนไม่ได้ — ใช้ปุ่ม "📷 ถ่ายรูป QR" แทน', true); return; }
   $('reader').style.display = 'block';
   scanner = new Html5Qrcode('reader', {
     verbose: false,
@@ -266,7 +311,7 @@ function startScan() {
 }
 function stopScan() {
   var s = scanner; scanner = null;
-  $('reader').style.display = 'none'; $('btnScan').textContent = '🎥 สแกนสด';
+  $('reader').style.display = 'none'; $('btnScan').textContent = '🎥 สแกน QR';
   if (s) s.stop().then(function () { s.clear(); }).catch(function () {});
 }
 /* ย่อรูปจากกล้องมือถือ (ภาพใหญ่มากมักอ่านไม่ออก) */
