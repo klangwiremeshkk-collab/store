@@ -119,6 +119,10 @@
         <label class="f">เลขที่ PO / ใบส่งของ</label>
         <input id="doc">
       </div>
+      <div id="fBack" class="hide">
+        <label class="f">🕘 วันที่ทำรายการ <span class="mut">(แอดมิน — เว้นว่าง = ตอนนี้ · ใส่เมื่อบันทึกย้อนหลัง/รายการตกค้าง)</span></label>
+        <input type="datetime-local" id="backDate">
+      </div>
       <label class="f">หมายเหตุ</label>
       <input id="note">
     </div>
@@ -258,6 +262,7 @@ function setTab(t) {
     $('fOut').classList.toggle('hide', t !== 'OUT');
     $('fIn').classList.toggle('hide', t !== 'IN');
     $('fCount').classList.toggle('hide', t !== 'COUNT');
+    showBack();
     $('whoLabel').textContent = { OUT: 'ผู้เบิก *', IN: 'ผู้รับเข้า *', COUNT: 'ผู้นับ *' }[t];
     $('cartTitle').textContent = { OUT: 'รายการเบิก', IN: 'รายการรับเข้า', COUNT: 'รายการนับ' }[t];
     $('btnSubmit').textContent = { OUT: 'บันทึกเบิกออก', IN: 'บันทึกรับเข้า', COUNT: 'บันทึกยอดนับ' }[t];
@@ -268,9 +273,17 @@ function setTab(t) {
   if (t === 'MORE' && !$('moreBody').innerHTML) loadReorder();
 }
 function isAdmin() { return D.role !== 'tech'; }
+function showBack() {
+  var on = isAdmin() && (mode === 'OUT' || mode === 'IN');
+  $('fBack').classList.toggle('hide', !on);
+  if (!on) $('backDate').value = '';
+  var n = new Date(); n.setMinutes(n.getMinutes() - n.getTimezoneOffset());
+  $('backDate').max = n.toISOString().slice(0, 16);
+}
 function applyRole() {
   document.querySelectorAll('nav button[data-tab="IN"], nav button[data-tab="COUNT"]').forEach(function (b) { b.classList.toggle('hide', !isAdmin()); });
   if (!isAdmin() && (mode === 'IN' || mode === 'COUNT')) setTab('OUT');
+  showBack();
   $('roleInfo').textContent = isAdmin() ? 'เข้าใช้งานในฐานะ: แอดมิน (ทำได้ทุกเมนู)' : 'เข้าใช้งานในฐานะ: ช่าง (เบิก · คืน · ดูสต๊อก) — รับเข้า/นับ/ยกเลิก ต้องใช้ PIN แอดมิน';
   $('btnPin').classList.toggle('hide', typeof API_URL === 'undefined');
 }
@@ -470,14 +483,24 @@ $('btnSubmit').onclick = function () {
     head.machine = $('machine').value.trim(); head.purpose = $('purpose').value.trim(); head.job = $('job').value.trim();
     if (!head.machine && cart.some(function (l) { return !l.m; })) { toast('กรุณาระบุเครื่องที่ใช้ (ช่องด้านล่าง หรือแยกในแต่ละรายการ)', true); return; }
   } else { head.vendor = $('vendor').value.trim(); head.doc = $('doc').value.trim(); }
+  if ($('backDate').value) {
+    var ts = new Date($('backDate').value).getTime();
+    if (isNaN(ts)) { toast('วันที่ย้อนหลังไม่ถูกต้อง', true); return; }
+    if (ts > Date.now() + 5 * 60000) { toast('วันที่ย้อนหลังต้องไม่เกินเวลาปัจจุบัน', true); return; }
+    head.ts = ts;
+  }
   busy = true; $('btnSubmit').disabled = true; $('btnSubmit').textContent = 'กำลังบันทึก…';
   var kind = mode;
   google.script.run.withSuccessHandler(function (r) {
     r.items.forEach(function (it) { if (P[it.c]) { P[it.c].b = it.b; P[it.c].s = it.s; P[it.c].p = it.p; } });
     carts[kind] = []; store('kwm_who', head.who);
-    $('note').value = ''; $('job').value = ''; $('doc').value = '';
+    $('note').value = ''; $('job').value = ''; $('doc').value = ''; $('backDate').value = '';
     done(); renderCart(); renderStock();
-    toast('✅ บันทึกแล้ว ' + r.id + ' (' + r.items.length + ' รายการ)');
+    if (r.beforeCount && r.beforeCount.length) {
+      toast('✅ บันทึกย้อนหลังแล้ว — แต่ ' + r.beforeCount.join(', ') + ' เกิดก่อนวันนับสต๊อก จึงไม่เปลี่ยนยอดคงเหลือ (ยอดนับรวมไว้แล้ว)', true);
+    } else {
+      toast('✅ บันทึกแล้ว ' + r.id + ' (' + r.items.length + ' รายการ)' + (head.ts ? ' · ย้อนหลัง' : ''));
+    }
   }).withFailureHandler(function (e) { done(); toast('บันทึกไม่สำเร็จ: ' + e.message, true); })
     .submitTxn(kind, head, cart.map(function (l) { return { c: l.c, q: Number(l.q), p: l.p, m: l.m || '' }; }));
   function done() { busy = false; $('btnSubmit').disabled = false; setTab(mode); }
