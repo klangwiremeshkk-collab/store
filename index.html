@@ -403,6 +403,7 @@ function addToCart(c) {
     if (inp) { inp.focus(); inp.select(); }
     return;
   }
+  if (line && mode === 'OUT' && (line.w || line.m)) { cart.unshift({ c: c, q: 1, p: p.p || '' }); renderCart(); toast('เพิ่ม ' + p.n + ' เป็นรายการใหม่'); return; }
   if (line) line.q += 1; else cart.unshift({ c: c, q: 1, p: p.p || '' });
   renderCart();
   toast('เพิ่ม ' + p.n);
@@ -444,6 +445,7 @@ function renderCart() {
       '<button class="x" data-del="' + i + '">×</button></div>' +
       '<div class="row" style="margin-top:8px;justify-content:space-between">' +
       '<div class="qty"><button data-dec="' + i + '">−</button><input type="number" inputmode="decimal" min="0" step="any" data-q="' + i + '" value="' + l.q + '"><button data-inc="' + i + '">+</button><span class="mut">' + esc(p.un) + '</span></div>' +
+      (mode === 'OUT' ? '<button class="btn alt sbtn" data-split="' + i + '" title="เพิ่มอะไหล่ตัวเดียวกันอีกรายการ (คนละคน/คนละเครื่อง)">＋ เพิ่มอีกรายการ</button>' : '') +
       (mode === 'IN' ? '<div style="width:130px"><input type="number" inputmode="decimal" step="any" data-p="' + i + '" value="' + l.p + '" placeholder="ราคา/หน่วย"></div>' : '') +
       '</div>' + (mode === 'OUT' ? '<div style="margin-top:8px' + (isAdmin() ? ';display:grid;grid-template-columns:1fr 1fr;gap:6px' : '') + '">' +
         (isAdmin() ? '<input data-w="' + i + '" list="dlPeople" value="' + esc(l.w || '') + '" placeholder="👷 ผู้เบิก (ว่าง = ตามด้านล่าง)" autocomplete="off">' : '') +
@@ -454,6 +456,13 @@ $('cart').onclick = function (e) {
   var t = e.target, cart = carts[mode], i;
   if (t.dataset.photo) { takePhoto(t.dataset.photo); return; }
   if (t.dataset.del != null) { cart.splice(+t.dataset.del, 1); if (mode === 'COUNT') saveCount(); renderCart(); }
+  else if (t.dataset.split != null) {
+    i = +t.dataset.split;
+    cart.splice(i + 1, 0, { c: cart[i].c, q: 1, p: cart[i].p });
+    renderCart();
+    var nx = document.querySelector('#cart input[data-' + (isAdmin() ? 'w' : 'm') + '="' + (i + 1) + '"]');
+    if (nx) nx.focus();
+  }
   else if (t.dataset.inc != null) { i = +t.dataset.inc; cart[i].q = +(Number(cart[i].q) + 1).toFixed(3); renderCart(); }
   else if (t.dataset.dec != null) { i = +t.dataset.dec; if (cart[i].q > 1) { cart[i].q = +(Number(cart[i].q) - 1).toFixed(3); renderCart(); } }
 };
@@ -466,7 +475,10 @@ $('cart').onchange = function (e) {
   if (t.dataset.l != null) { cart[+t.dataset.l].loc = t.value.trim(); saveCount(); }
 };
 $('cart').oninput = function (e) {
-  var t = e.target;
+  var t = e.target, ct = carts[mode];
+  if (t.dataset.m != null && ct[+t.dataset.m]) ct[+t.dataset.m].m = t.value.trim();
+  if (t.dataset.w != null && ct[+t.dataset.w]) ct[+t.dataset.w].w = t.value.trim();
+  if (t.dataset.p != null && ct[+t.dataset.p]) ct[+t.dataset.p].p = t.value;
   if (t.dataset.n != null) {
     var i = +t.dataset.n, l = carts.COUNT[i];
     l.n = t.value === '' ? '' : Number(t.value);
