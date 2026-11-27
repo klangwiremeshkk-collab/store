@@ -122,6 +122,8 @@
       <div id="fBack" class="hide">
         <label class="f">🕘 วันที่ทำรายการ <span class="mut">(แอดมิน — เว้นว่าง = ตอนนี้ · ใส่เมื่อบันทึกย้อนหลัง/รายการตกค้าง)</span></label>
         <input type="datetime-local" id="backDate">
+        <label class="f">✍️ ผู้บันทึก (แอดมิน) <span class="mut">— ใช้เมื่อบันทึกแทนช่าง/ย้อนหลัง</span></label>
+        <input id="by" list="dlPeople" placeholder="ชื่อแอดมิน" autocomplete="off">
       </div>
       <label class="f">หมายเหตุ</label>
       <input id="note">
@@ -241,6 +243,7 @@ function load() {
     $('hdrInfo').textContent = d.parts.length + ' รายการ' + (d.role === 'tech' ? ' · ช่าง' : ' · แอดมิน');
     applyRole();
     var w = store('kwm_who'); if (w) $('who').value = w;
+    var ad = store('kwm_admin'); if (ad) $('by').value = ad;
     try { var dr = JSON.parse(store('kwm_count') || '[]'); carts.COUNT = dr.filter(function (l) { return P[l.c]; }); } catch (e) {}
     renderStock();
   }).withFailureHandler(function (e) { toast('โหลดข้อมูลไม่สำเร็จ: ' + e.message, true); $('hdrInfo').textContent = 'โหลดไม่สำเร็จ'; }).getInit();
@@ -442,7 +445,9 @@ function renderCart() {
       '<div class="row" style="margin-top:8px;justify-content:space-between">' +
       '<div class="qty"><button data-dec="' + i + '">−</button><input type="number" inputmode="decimal" min="0" step="any" data-q="' + i + '" value="' + l.q + '"><button data-inc="' + i + '">+</button><span class="mut">' + esc(p.un) + '</span></div>' +
       (mode === 'IN' ? '<div style="width:130px"><input type="number" inputmode="decimal" step="any" data-p="' + i + '" value="' + l.p + '" placeholder="ราคา/หน่วย"></div>' : '') +
-      '</div>' + (mode === 'OUT' ? '<div style="margin-top:8px"><input data-m="' + i + '" list="dlMachines" value="' + esc(l.m || '') + '" placeholder="ใช้กับเครื่อง (ว่าง = ตามช่องด้านล่าง)" autocomplete="off"></div>' : '') + (over ? '<div class="warn">⚠ เบิกเกินยอดคงเหลือในระบบ</div>' : '') + '</div>';
+      '</div>' + (mode === 'OUT' ? '<div style="margin-top:8px' + (isAdmin() ? ';display:grid;grid-template-columns:1fr 1fr;gap:6px' : '') + '">' +
+        (isAdmin() ? '<input data-w="' + i + '" list="dlPeople" value="' + esc(l.w || '') + '" placeholder="👷 ผู้เบิก (ว่าง = ตามด้านล่าง)" autocomplete="off">' : '') +
+        '<input data-m="' + i + '" list="dlMachines" value="' + esc(l.m || '') + '" placeholder="ใช้กับเครื่อง (ว่าง = ตามด้านล่าง)" autocomplete="off"></div>' : '') + (over ? '<div class="warn">⚠ เบิกเกินยอดคงเหลือในระบบ</div>' : '') + '</div>';
   }).join('');
 }
 $('cart').onclick = function (e) {
@@ -457,6 +462,7 @@ $('cart').onchange = function (e) {
   if (t.dataset.q != null) { cart[+t.dataset.q].q = Number(t.value) || 0; renderCart(); }
   if (t.dataset.p != null) { cart[+t.dataset.p].p = t.value; }
   if (t.dataset.m != null) { cart[+t.dataset.m].m = t.value.trim(); }
+  if (t.dataset.w != null) { cart[+t.dataset.w].w = t.value.trim(); }
   if (t.dataset.l != null) { cart[+t.dataset.l].loc = t.value.trim(); saveCount(); }
 };
 $('cart').oninput = function (e) {
@@ -478,7 +484,10 @@ $('btnSubmit').onclick = function () {
   if (mode === 'COUNT') { submitCountUI(cart); return; }
   if (cart.some(function (l) { return !(Number(l.q) > 0); })) { toast('ใส่จำนวนให้ครบทุกรายการ', true); return; }
   var head = { who: $('who').value.trim(), note: $('note').value.trim() };
-  if (!head.who) { toast('กรุณาใส่ชื่อ' + (mode === 'OUT' ? 'ผู้เบิก' : 'ผู้รับเข้า'), true); return; }
+  if (!head.who && !(mode === 'OUT' && isAdmin() && cart.every(function (l) { return l.w; }))) {
+    toast('กรุณาใส่ชื่อ' + (mode === 'OUT' ? 'ผู้เบิก (ช่องด้านล่าง หรือแยกในแต่ละรายการ)' : 'ผู้รับเข้า'), true); return;
+  }
+  if (isAdmin()) { head.by = $('by').value.trim(); if (head.by) store('kwm_admin', head.by); }
   if (mode === 'OUT') {
     head.machine = $('machine').value.trim(); head.purpose = $('purpose').value.trim(); head.job = $('job').value.trim();
     if (!head.machine && cart.some(function (l) { return !l.m; })) { toast('กรุณาระบุเครื่องที่ใช้ (ช่องด้านล่าง หรือแยกในแต่ละรายการ)', true); return; }
@@ -493,7 +502,7 @@ $('btnSubmit').onclick = function () {
   var kind = mode;
   google.script.run.withSuccessHandler(function (r) {
     r.items.forEach(function (it) { if (P[it.c]) { P[it.c].b = it.b; P[it.c].s = it.s; P[it.c].p = it.p; } });
-    carts[kind] = []; store('kwm_who', head.who);
+    carts[kind] = []; if (head.who) store('kwm_who', head.who);
     $('note').value = ''; $('job').value = ''; $('doc').value = ''; $('backDate').value = '';
     done(); renderCart(); renderStock();
     if (r.beforeCount && r.beforeCount.length) {
@@ -502,7 +511,7 @@ $('btnSubmit').onclick = function () {
       toast('✅ บันทึกแล้ว ' + r.id + ' (' + r.items.length + ' รายการ)' + (head.ts ? ' · ย้อนหลัง' : ''));
     }
   }).withFailureHandler(function (e) { done(); toast('บันทึกไม่สำเร็จ: ' + e.message, true); })
-    .submitTxn(kind, head, cart.map(function (l) { return { c: l.c, q: Number(l.q), p: l.p, m: l.m || '' }; }));
+    .submitTxn(kind, head, cart.map(function (l) { return { c: l.c, q: Number(l.q), p: l.p, m: l.m || '', w: (isAdmin() && kind === 'OUT' && l.w) || '' }; }));
   function done() { busy = false; $('btnSubmit').disabled = false; setTab(mode); }
 };
 
